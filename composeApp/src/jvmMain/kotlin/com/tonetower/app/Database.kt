@@ -15,7 +15,7 @@ object SetupTransactions : Table("setup_transactions") {
     val model = varchar("model", 100)
     val servicesJson = text("services_json")
     val totalPrice = double("total_price")
-    val status = varchar("status", 20) // Pending, Completed, Cancelled
+    val status = varchar("status", 20)
     override val primaryKey = PrimaryKey(referenceId)
 }
 
@@ -28,16 +28,23 @@ object StudioBookings : Table("studio_bookings") {
     override val primaryKey = PrimaryKey(referenceId)
 }
 
+// NEW TABLE FOR PHASE 2 - DO NOT MISS THIS
+object AdminSettings : Table("admin_settings") {
+    val key = varchar("setting_key", 100)
+    val value = double("setting_value")
+    override val primaryKey = PrimaryKey(key)
+}
+
 // --- MANAGER ---
 
 object DatabaseManager {
     fun init() {
-        // Saves the database file in your user folder
         val dbFile = File(System.getProperty("user.home"), "tonetower_v1.db")
         Database.connect("jdbc:sqlite:${dbFile.absolutePath}", "org.sqlite.JDBC")
 
         transaction {
-            SchemaUtils.create(SetupTransactions, StudioBookings)
+            // Added AdminSettings here so the table actually gets created
+            SchemaUtils.create(SetupTransactions, StudioBookings, AdminSettings)
         }
     }
 }
