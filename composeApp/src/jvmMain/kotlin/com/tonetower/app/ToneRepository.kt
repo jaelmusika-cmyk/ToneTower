@@ -121,4 +121,12 @@ object ToneRepository {
                 .singleOrNull() ?: default
         }
     }
+
+    fun updateJobStatus(jobId: Int, newStatus: String) {
+        transaction {
+            SetupsTable.update({ SetupsTable.id eq jobId }) {
+                it[status] = newStatus
+            }
+        }
+    }
 }

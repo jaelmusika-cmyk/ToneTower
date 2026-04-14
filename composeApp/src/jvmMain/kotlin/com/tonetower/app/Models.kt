@@ -14,7 +14,7 @@ data class ServiceItem(
 @Serializable
 data class SetupJob(
     val id: Int = 0,
-    val referenceId: String, // NEW: e.g., SRV-20260415-001
+    val referenceId: String,
     val clientName: String,
     val clientPhone: String,
     val instrumentModel: String,
@@ -22,7 +22,13 @@ data class SetupJob(
     val dateAdded: Long,
     val totalFee: Double,
     val servicesDone: String,
-    val status: String = "Pending" // NEW: Default to Pending
+    val status: String = "Pending",
+    // NEW Phase B Fields
+    val inboundMethod: String = "Walk-in", // Walk-in or Courier
+    val logisticsInfo: String = "",        // Rider name/details
+    val paymentMode: String = "Cash",      // Cash, GCash, Bank Transfer
+    val amountTendered: Double = 0.0,
+    val changeDue: Double = 0.0
 )
 
 data class SetupTransaction(
