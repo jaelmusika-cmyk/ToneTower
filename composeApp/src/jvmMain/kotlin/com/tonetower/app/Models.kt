@@ -28,3 +28,9 @@ data class StudioBooking(
     val endTime: LocalDateTime,
     val totalPrice: Double
 )
+
+// Add this to Models.kt
+data class AdminSetting(
+    val key: String,
+    val value: Double
+)
