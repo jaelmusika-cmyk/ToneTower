@@ -9,10 +9,46 @@ import kotlinx.serialization.encodeToString
 // Explicitly importing the table objects from your Database.kt
 import com.tonetower.app.SetupTransactions
 import com.tonetower.app.AdminSettings
+import com.tonetower.app.SetupsTable
 
 object ToneRepository {
 
-    // --- SETUP TRANSACTIONS ---
+    // --- NEW SETUP INTAKE (PHASE 3) ---
+
+    fun saveSetupJob(job: SetupJob) {
+        transaction {
+            SetupsTable.insert {
+                it[clientName] = job.clientName
+                it[clientPhone] = job.clientPhone
+                it[instrumentModel] = job.instrumentModel
+                it[serialNumber] = job.serialNumber
+                it[dateAdded] = job.dateAdded
+                it[totalFee] = job.totalFee
+                it[servicesDone] = job.servicesDone
+            }
+        }
+    }
+
+    fun getAllSetupJobs(): List<SetupJob> {
+        return transaction {
+            SetupsTable.selectAll()
+                .orderBy(SetupsTable.dateAdded to SortOrder.DESC)
+                .map {
+                    SetupJob(
+                        id = it[SetupsTable.id],
+                        clientName = it[SetupsTable.clientName],
+                        clientPhone = it[SetupsTable.clientPhone],
+                        instrumentModel = it[SetupsTable.instrumentModel],
+                        serialNumber = it[SetupsTable.serialNumber],
+                        dateAdded = it[SetupsTable.dateAdded],
+                        totalFee = it[SetupsTable.totalFee],
+                        servicesDone = it[SetupsTable.servicesDone]
+                    )
+                }
+        }
+    }
+
+    // --- LEGACY SETUP TRANSACTIONS ---
 
     fun saveSetup(setup: SetupTransaction) {
         transaction {
@@ -48,12 +84,10 @@ object ToneRepository {
 
     fun saveSetting(settingKey: String, settingValue: Double) {
         transaction {
-            // Check if the setting already exists using the explicit table reference
             val exists = AdminSettings.select { AdminSettings.key eq settingKey }.any()
 
             if (exists) {
                 AdminSettings.update({ AdminSettings.key eq settingKey }) {
-                    // Explicitly using AdminSettings.value to fix the "Unresolved reference"
                     it[AdminSettings.value] = settingValue
                 }
             } else {

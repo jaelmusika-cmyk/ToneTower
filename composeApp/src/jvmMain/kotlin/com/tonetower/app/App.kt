@@ -161,19 +161,28 @@ fun SetupsContent() {
     var clientName by remember { mutableStateOf("") }
     var clientPhone by remember { mutableStateOf("") }
     var instrumentModel by remember { mutableStateOf("") }
-    var serialNumber by remember { mutableStateOf("") } // Used below now!
+    var serialNumber by remember { mutableStateOf("") }
 
     // 2. Service Selection State
     var needsRestring by remember { mutableStateOf(false) }
     var needsDeepClean by remember { mutableStateOf(false) }
     var needsFretLevel by remember { mutableStateOf(false) }
 
-    // 3. Pricing Logic
+    // 3. History State
+    var history by remember { mutableStateOf(listOf<SetupJob>()) }
+
+    // 4. Pricing Logic
     var baseFee by remember { mutableStateOf(1300.0) }
 
-    // Pull the base fee you set in the Admin screen
+    // Helper to refresh data from DB
+    fun refreshData() {
+        history = ToneRepository.getAllSetupJobs()
+    }
+
+    // Initial Load
     LaunchedEffect(Unit) {
         baseFee = ToneRepository.getSetting("setup_base_price", 1300.0)
+        refreshData()
     }
 
     // Dynamic Total Calculation
@@ -196,31 +205,10 @@ fun SetupsContent() {
         HorizontalDivider()
 
         // --- Client & Instrument Info ---
-        OutlinedTextField(
-            value = clientName,
-            onValueChange = { clientName = it },
-            label = { Text("Client Name") },
-            modifier = Modifier.fillMaxWidth()
-        )
-        OutlinedTextField(
-            value = clientPhone,
-            onValueChange = { clientPhone = it },
-            label = { Text("Phone Number") },
-            modifier = Modifier.fillMaxWidth()
-        )
-        OutlinedTextField(
-            value = instrumentModel,
-            onValueChange = { instrumentModel = it },
-            label = { Text("Instrument Model") },
-            modifier = Modifier.fillMaxWidth()
-        )
-        // Resolves the "Unused" warning:
-        OutlinedTextField(
-            value = serialNumber,
-            onValueChange = { serialNumber = it },
-            label = { Text("Serial Number") },
-            modifier = Modifier.fillMaxWidth()
-        )
+        OutlinedTextField(value = clientName, onValueChange = { clientName = it }, label = { Text("Client Name") }, modifier = Modifier.fillMaxWidth())
+        OutlinedTextField(value = clientPhone, onValueChange = { clientPhone = it }, label = { Text("Phone Number") }, modifier = Modifier.fillMaxWidth())
+        OutlinedTextField(value = instrumentModel, onValueChange = { instrumentModel = it }, label = { Text("Instrument Model") }, modifier = Modifier.fillMaxWidth())
+        OutlinedTextField(value = serialNumber, onValueChange = { serialNumber = it }, label = { Text("Serial Number") }, modifier = Modifier.fillMaxWidth())
 
         Text("Additional Services", style = MaterialTheme.typography.titleMedium)
 
@@ -228,8 +216,6 @@ fun SetupsContent() {
         ServiceRow("String Change (+₱200)", needsRestring) { needsRestring = it }
         ServiceRow("Deep Cleaning (+₱300)", needsDeepClean) { needsDeepClean = it }
         ServiceRow("Fret Leveling (+₱1500)", needsFretLevel) { needsFretLevel = it }
-
-        Spacer(Modifier.height(8.dp))
 
         // --- Total Price Card ---
         Card(
@@ -249,13 +235,67 @@ fun SetupsContent() {
         // --- Save Button ---
         Button(
             onClick = {
-                // We'll call the repository here to save the job
-                println("Saving setup for $clientName - Total: ₱$totalDisplay")
-                // TODO: ToneRepository.saveSetupJob(...)
+                val services = listOfNotNull(
+                    if (needsRestring) "Restring" else null,
+                    if (needsDeepClean) "Deep Clean" else null,
+                    if (needsFretLevel) "Fret Level" else null
+                ).joinToString(", ")
+
+                val job = SetupJob(
+                    clientName = clientName,
+                    clientPhone = clientPhone,
+                    instrumentModel = instrumentModel,
+                    serialNumber = serialNumber,
+                    dateAdded = System.currentTimeMillis(),
+                    totalFee = totalDisplay,
+                    servicesDone = services
+                )
+
+                ToneRepository.saveSetupJob(job)
+
+                // Reset Form
+                clientName = ""; clientPhone = ""; instrumentModel = ""; serialNumber = ""
+                needsRestring = false; needsDeepClean = false; needsFretLevel = false
+
+                // Update History List instantly
+                refreshData()
             },
+            enabled = clientName.isNotBlank() && instrumentModel.isNotBlank(),
             modifier = Modifier.fillMaxWidth().height(56.dp)
         ) {
             Text("Save Setup Record")
+        }
+
+        Spacer(Modifier.height(24.dp))
+        Text("Recent History", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+        HorizontalDivider()
+
+        // --- History List ---
+        if (history.isEmpty()) {
+            Text("No recent setups found.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.outline)
+        } else {
+            history.forEach { job ->
+                HistoryCard(job)
+            }
+        }
+    }
+}
+
+@Composable
+fun HistoryCard(job: SetupJob) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text(job.clientName, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+                Text("₱${job.totalFee}", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+            }
+            Text("${job.instrumentModel} • SN: ${job.serialNumber}", style = MaterialTheme.typography.bodySmall)
+            if (job.servicesDone.isNotBlank()) {
+                Text("Services: ${job.servicesDone}", style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 4.dp))
+            }
         }
     }
 }

@@ -10,6 +10,19 @@ data class ServiceItem(
     val price: Double
 )
 
+// NEW: This model maps directly to your new "setups" table
+@Serializable
+data class SetupJob(
+    val id: Int = 0,
+    val clientName: String,
+    val clientPhone: String,
+    val instrumentModel: String,
+    val serialNumber: String,
+    val dateAdded: Long, // Use System.currentTimeMillis()
+    val totalFee: Double,
+    val servicesDone: String // Comma-separated list (e.g., "Restring, Deep Clean")
+)
+
 data class SetupTransaction(
     val referenceId: String,
     val clientName: String,
@@ -29,13 +42,11 @@ data class StudioBooking(
     val totalPrice: Double
 )
 
-// Add this to Models.kt
 data class AdminSetting(
     val key: String,
     val value: Double
 )
 
-// Add to Models.kt
 enum class AppScreen {
     DASHBOARD,
     SETUPS,

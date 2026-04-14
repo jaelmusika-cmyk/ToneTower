@@ -2,12 +2,12 @@ package com.tonetower.app
 
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.javatime.date
-import org.jetbrains.exposed.sql.javatime.datetime
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.io.File
 
 // --- TABLES ---
 
+// Used for historical/high-level transaction tracking
 object SetupTransactions : Table("setup_transactions") {
     val referenceId = varchar("reference_id", 50)
     val clientName = varchar("client_name", 255)
@@ -19,6 +19,20 @@ object SetupTransactions : Table("setup_transactions") {
     override val primaryKey = PrimaryKey(referenceId)
 }
 
+// Used for the Intake Form we just built
+object SetupsTable : Table("setups") {
+    val id = integer("id").autoIncrement()
+    val clientName = varchar("client_name", 255)
+    val clientPhone = varchar("client_phone", 50)
+    val instrumentModel = varchar("instrument_model", 255)
+    val serialNumber = varchar("serial_number", 255)
+    val dateAdded = long("date_added")
+    val totalFee = double("total_fee")
+    val servicesDone = text("services_done")
+
+    override val primaryKey = PrimaryKey(id)
+}
+
 object StudioBookings : Table("studio_bookings") {
     val referenceId = varchar("reference_id", 50)
     val clientName = varchar("client_name", 255)
@@ -28,7 +42,6 @@ object StudioBookings : Table("studio_bookings") {
     override val primaryKey = PrimaryKey(referenceId)
 }
 
-// NEW TABLE FOR PHASE 2 - DO NOT MISS THIS
 object AdminSettings : Table("admin_settings") {
     val key = varchar("setting_key", 100)
     val value = double("setting_value")
@@ -39,12 +52,18 @@ object AdminSettings : Table("admin_settings") {
 
 object DatabaseManager {
     fun init() {
+        // Storing the DB in the user home folder ensures it persists even if the app folder moves
         val dbFile = File(System.getProperty("user.home"), "tonetower_v1.db")
         Database.connect("jdbc:sqlite:${dbFile.absolutePath}", "org.sqlite.JDBC")
 
         transaction {
-            // Added AdminSettings here so the table actually gets created
-            SchemaUtils.create(SetupTransactions, StudioBookings, AdminSettings)
+            // CRITICAL: All tables must be listed here to be created on startup
+            SchemaUtils.create(
+                SetupTransactions,
+                StudioBookings,
+                AdminSettings,
+                SetupsTable
+            )
         }
     }
 }
