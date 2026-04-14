@@ -1,4 +1,4 @@
-rootProject.name = "MyApplication"
+rootProject.name = "ToneTower"
 enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 
 pluginManagement {
