@@ -4,7 +4,7 @@ import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 
 fun main() = application {
-    // 1. Initialize the DB before anything else
+    // Initialize the DB before the UI starts
     DatabaseManager.init()
 
     Window(
