@@ -19,10 +19,10 @@ object SetupTransactions : Table("setup_transactions") {
     override val primaryKey = PrimaryKey(referenceId)
 }
 
-// Used for the Intake Form we just built
+// Updated for Phase B: Logistics & Financials
 object SetupsTable : Table("setups") {
     val id = integer("id").autoIncrement()
-    val referenceId = varchar("reference_id", 50).uniqueIndex() // NEW
+    val referenceId = varchar("reference_id", 50).uniqueIndex()
     val clientName = varchar("client_name", 255)
     val clientPhone = varchar("client_phone", 50)
     val instrumentModel = varchar("instrument_model", 255)
@@ -30,7 +30,14 @@ object SetupsTable : Table("setups") {
     val dateAdded = long("date_added")
     val totalFee = double("total_fee")
     val servicesDone = text("services_done")
-    val status = varchar("status", 20).default("Pending") // NEW
+    val status = varchar("status", 20).default("Pending")
+
+    // --- NEW PHASE B COLUMNS ---
+    val inboundMethod = varchar("inbound_method", 50).default("Walk-in")
+    val logisticsInfo = text("logistics_info").default("")
+    val paymentMode = varchar("payment_mode", 50).default("Cash")
+    val amountTendered = double("amount_tendered").default(0.0)
+    val changeDue = double("change_due").default(0.0)
 
     override val primaryKey = PrimaryKey(id)
 }
