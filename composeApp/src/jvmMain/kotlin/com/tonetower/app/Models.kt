@@ -34,3 +34,11 @@ data class AdminSetting(
     val key: String,
     val value: Double
 )
+
+// Add to Models.kt
+enum class AppScreen {
+    DASHBOARD,
+    SETUPS,
+    STUDIO,
+    ADMIN
+}
