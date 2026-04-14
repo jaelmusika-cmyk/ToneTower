@@ -1,22 +1,24 @@
 package com.tonetower.app
 
+// --- REFRESHED IMPORTS (Fixed Unresolved References) ---
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 
-// Icons
+// Icons (Using Extended Icons)
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Build
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.*
 
-import org.jetbrains.compose.ui.tooling.preview.Preview
+// Standard Preview
+import androidx.compose.ui.tooling.preview.Preview
 
 @Composable
 @Preview
@@ -155,7 +157,118 @@ fun DashboardContent() {
 
 @Composable
 fun SetupsContent() {
-    Text("Guitar Setup Tracker. Log instrument maintenance here.")
+    // 1. Form State
+    var clientName by remember { mutableStateOf("") }
+    var clientPhone by remember { mutableStateOf("") }
+    var instrumentModel by remember { mutableStateOf("") }
+    var serialNumber by remember { mutableStateOf("") } // Used below now!
+
+    // 2. Service Selection State
+    var needsRestring by remember { mutableStateOf(false) }
+    var needsDeepClean by remember { mutableStateOf(false) }
+    var needsFretLevel by remember { mutableStateOf(false) }
+
+    // 3. Pricing Logic
+    var baseFee by remember { mutableStateOf(1300.0) }
+
+    // Pull the base fee you set in the Admin screen
+    LaunchedEffect(Unit) {
+        baseFee = ToneRepository.getSetting("setup_base_price", 1300.0)
+    }
+
+    // Dynamic Total Calculation
+    val totalDisplay = remember(baseFee, needsRestring, needsDeepClean, needsFretLevel) {
+        var total = baseFee
+        if (needsRestring) total += 200.0
+        if (needsDeepClean) total += 300.0
+        if (needsFretLevel) total += 1500.0
+        total
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp)
+            .verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        Text("New Setup Intake", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+        HorizontalDivider()
+
+        // --- Client & Instrument Info ---
+        OutlinedTextField(
+            value = clientName,
+            onValueChange = { clientName = it },
+            label = { Text("Client Name") },
+            modifier = Modifier.fillMaxWidth()
+        )
+        OutlinedTextField(
+            value = clientPhone,
+            onValueChange = { clientPhone = it },
+            label = { Text("Phone Number") },
+            modifier = Modifier.fillMaxWidth()
+        )
+        OutlinedTextField(
+            value = instrumentModel,
+            onValueChange = { instrumentModel = it },
+            label = { Text("Instrument Model") },
+            modifier = Modifier.fillMaxWidth()
+        )
+        // Resolves the "Unused" warning:
+        OutlinedTextField(
+            value = serialNumber,
+            onValueChange = { serialNumber = it },
+            label = { Text("Serial Number") },
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        Text("Additional Services", style = MaterialTheme.typography.titleMedium)
+
+        // --- Service Checkboxes ---
+        ServiceRow("String Change (+₱200)", needsRestring) { needsRestring = it }
+        ServiceRow("Deep Cleaning (+₱300)", needsDeepClean) { needsDeepClean = it }
+        ServiceRow("Fret Leveling (+₱1500)", needsFretLevel) { needsFretLevel = it }
+
+        Spacer(Modifier.height(8.dp))
+
+        // --- Total Price Card ---
+        Card(
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Row(
+                modifier = Modifier.padding(24.dp).fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("Total Estimated Fee:", style = MaterialTheme.typography.titleLarge)
+                Text("₱$totalDisplay", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.ExtraBold)
+            }
+        }
+
+        // --- Save Button ---
+        Button(
+            onClick = {
+                // We'll call the repository here to save the job
+                println("Saving setup for $clientName - Total: ₱$totalDisplay")
+                // TODO: ToneRepository.saveSetupJob(...)
+            },
+            modifier = Modifier.fillMaxWidth().height(56.dp)
+        ) {
+            Text("Save Setup Record")
+        }
+    }
+}
+
+@Composable
+fun ServiceRow(label: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Checkbox(checked = checked, onCheckedChange = onCheckedChange)
+        Text(label, modifier = Modifier.padding(start = 8.dp))
+    }
 }
 
 @Composable
