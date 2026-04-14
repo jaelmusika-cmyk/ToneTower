@@ -13,11 +13,23 @@ import com.tonetower.app.SetupsTable
 
 object ToneRepository {
 
-    // --- NEW SETUP INTAKE (PHASE 3) ---
+    // Helper to generate professional IDs
+    fun generateReferenceId(): String {
+        val datePart = java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd")
+            .format(java.time.LocalDate.now())
+
+        val count = transaction {
+            SetupsTable.selectAll().where { SetupsTable.referenceId like "SRV-$datePart-%" }.count()
+        }
+
+        // Formats as SRV-20260415-001, 002, etc.
+        return "SRV-$datePart-${(count + 1).toString().padStart(3, '0')}"
+    }
 
     fun saveSetupJob(job: SetupJob) {
         transaction {
             SetupsTable.insert {
+                it[referenceId] = job.referenceId
                 it[clientName] = job.clientName
                 it[clientPhone] = job.clientPhone
                 it[instrumentModel] = job.instrumentModel
@@ -25,6 +37,7 @@ object ToneRepository {
                 it[dateAdded] = job.dateAdded
                 it[totalFee] = job.totalFee
                 it[servicesDone] = job.servicesDone
+                it[status] = job.status
             }
         }
     }
@@ -36,13 +49,15 @@ object ToneRepository {
                 .map {
                     SetupJob(
                         id = it[SetupsTable.id],
+                        referenceId = it[SetupsTable.referenceId],
                         clientName = it[SetupsTable.clientName],
                         clientPhone = it[SetupsTable.clientPhone],
                         instrumentModel = it[SetupsTable.instrumentModel],
                         serialNumber = it[SetupsTable.serialNumber],
                         dateAdded = it[SetupsTable.dateAdded],
                         totalFee = it[SetupsTable.totalFee],
-                        servicesDone = it[SetupsTable.servicesDone]
+                        servicesDone = it[SetupsTable.servicesDone],
+                        status = it[SetupsTable.status]
                     )
                 }
         }

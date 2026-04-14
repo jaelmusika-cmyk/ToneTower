@@ -16,6 +16,7 @@ import androidx.compose.ui.unit.dp
 // Icons (Using Extended Icons)
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 
 // Standard Preview
 import androidx.compose.ui.tooling.preview.Preview
@@ -179,10 +180,13 @@ fun SetupsContent() {
         history = ToneRepository.getAllSetupJobs()
     }
 
-    // Initial Load
     LaunchedEffect(Unit) {
+        // 1. Get the price from Admin Settings
         baseFee = ToneRepository.getSetting("setup_base_price", 1300.0)
-        refreshData()
+
+        // 2. Fetch the jobs and update the state
+        // This assignment now triggers a UI RECOMPOSTION (Redraw)
+        history = ToneRepository.getAllSetupJobs()
     }
 
     // Dynamic Total Calculation
@@ -241,14 +245,19 @@ fun SetupsContent() {
                     if (needsFretLevel) "Fret Level" else null
                 ).joinToString(", ")
 
+                // Inside your Save Button onClick
+                val generatedId = ToneRepository.generateReferenceId() // Get the SRV-20260415-001 string
+
                 val job = SetupJob(
+                    referenceId = generatedId, // Pass the new ID here!
                     clientName = clientName,
                     clientPhone = clientPhone,
                     instrumentModel = instrumentModel,
                     serialNumber = serialNumber,
                     dateAdded = System.currentTimeMillis(),
                     totalFee = totalDisplay,
-                    servicesDone = services
+                    servicesDone = services,
+                    status = "Pending"
                 )
 
                 ToneRepository.saveSetupJob(job)
@@ -288,13 +297,55 @@ fun HistoryCard(job: SetupJob) {
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text(job.clientName, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
-                Text("₱${job.totalFee}", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Professional ID at the top left
+                Text(
+                    text = job.referenceId,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Bold
+                )
+
+                // Status Badge (Red for Pending, Green for Completed)
+                Surface(
+                    shape = RoundedCornerShape(4.dp),
+                    color = if (job.status == "Pending")
+                        MaterialTheme.colorScheme.errorContainer
+                    else
+                        MaterialTheme.colorScheme.primaryContainer
+                ) {
+                    Text(
+                        text = job.status.uppercase(),
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = if (job.status == "Pending")
+                            MaterialTheme.colorScheme.onErrorContainer
+                        else
+                            MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                }
             }
+
+            Spacer(Modifier.height(8.dp))
+
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text(job.clientName, fontWeight = FontWeight.ExtraBold, style = MaterialTheme.typography.titleMedium)
+                Text("₱${job.totalFee}", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.secondary)
+            }
+
             Text("${job.instrumentModel} • SN: ${job.serialNumber}", style = MaterialTheme.typography.bodySmall)
+
             if (job.servicesDone.isNotBlank()) {
-                Text("Services: ${job.servicesDone}", style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 4.dp))
+                Text(
+                    text = "Services: ${job.servicesDone}",
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.padding(top = 4.dp),
+                    color = MaterialTheme.colorScheme.outline
+                )
             }
         }
     }

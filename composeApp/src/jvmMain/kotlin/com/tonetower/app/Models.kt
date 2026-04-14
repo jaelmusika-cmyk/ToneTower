@@ -14,13 +14,15 @@ data class ServiceItem(
 @Serializable
 data class SetupJob(
     val id: Int = 0,
+    val referenceId: String, // NEW: e.g., SRV-20260415-001
     val clientName: String,
     val clientPhone: String,
     val instrumentModel: String,
     val serialNumber: String,
-    val dateAdded: Long, // Use System.currentTimeMillis()
+    val dateAdded: Long,
     val totalFee: Double,
-    val servicesDone: String // Comma-separated list (e.g., "Restring, Deep Clean")
+    val servicesDone: String,
+    val status: String = "Pending" // NEW: Default to Pending
 )
 
 data class SetupTransaction(
@@ -53,3 +55,4 @@ enum class AppScreen {
     STUDIO,
     ADMIN
 }
+
