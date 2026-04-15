@@ -18,6 +18,15 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 
+import java.awt.Toolkit
+import java.awt.datatransfer.StringSelection
+
+fun copyToClipboard(text: String) {
+    val selection = StringSelection(text)
+    val clipboard = Toolkit.getDefaultToolkit().systemClipboard
+    clipboard.setContents(selection, selection)
+}
+
 @Composable
 fun App() {
     MaterialTheme {
@@ -288,9 +297,20 @@ fun SetupsContent() {
 
 @Composable
 fun HistoryCard(job: SetupJob, onStatusUpdate: () -> Unit) {
-    // Helper to generate the text block for sharing/copying
+    // 1. State for the "Copied" feedback
+    var isCopied by remember { mutableStateOf(false) }
+
+    // 2. Auto-reset the feedback after 2 seconds
+    LaunchedEffect(isCopied) {
+        if (isCopied) {
+            kotlinx.coroutines.delay(2000)
+            isCopied = false
+        }
+    }
+
+    // 3. The Professional Receipt Generator
     fun generateProfessionalReceipt(job: SetupJob): String {
-        val vatAmount = job.totalFee * 0.1071 // 12% VAT-inclusive calculation
+        val vatAmount = job.totalFee * 0.1071 // 12% VAT-inclusive component
         val netOfVat = job.totalFee - vatAmount
 
         return """
@@ -324,6 +344,7 @@ fun HistoryCard(job: SetupJob, onStatusUpdate: () -> Unit) {
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
+            // Header: ID and Status
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Text(job.referenceId, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
                 Surface(
@@ -333,26 +354,40 @@ fun HistoryCard(job: SetupJob, onStatusUpdate: () -> Unit) {
                     Text(job.status.uppercase(), modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp), style = MaterialTheme.typography.labelSmall)
                 }
             }
+
             Spacer(Modifier.height(8.dp))
+
+            // Client and Fee
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Text(job.clientName, fontWeight = FontWeight.ExtraBold, style = MaterialTheme.typography.titleMedium)
                 Text("₱${job.totalFee}", fontWeight = FontWeight.Bold)
             }
+
+            // Model and Details
             Text("${job.instrumentModel} • ${job.inboundMethod} (${job.paymentMode})", style = MaterialTheme.typography.bodySmall)
 
+            // Action Buttons
             Row(
                 modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
                 horizontalArrangement = Arrangement.End,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // EXPORT BUTTON: Prints receipt to console (you can add Clipboard logic here)
+                // EXPORT BUTTON with Clipboard Integration
                 OutlinedButton(
-                    onClick = { println(generateProfessionalReceipt(job)) },
+                    onClick = {
+                        val receipt = generateProfessionalReceipt(job)
+                        copyToClipboard(receipt)
+                        isCopied = true
+                    },
                     modifier = Modifier.padding(end = 8.dp)
                 ) {
-                    Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Icon(
+                        if (isCopied) Icons.Default.Check else Icons.Default.Share,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
                     Spacer(Modifier.width(8.dp))
-                    Text("Export Receipt")
+                    Text(if (isCopied) "Copied!" else "Export Receipt")
                 }
 
                 if (job.status == "Pending") {
