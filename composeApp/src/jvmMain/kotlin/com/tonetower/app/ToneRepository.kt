@@ -38,6 +38,12 @@ object ToneRepository {
                 it[totalFee] = job.totalFee
                 it[servicesDone] = job.servicesDone
                 it[status] = job.status
+                // NEW PHASE B DATA
+                it[inboundMethod] = job.inboundMethod
+                it[logisticsInfo] = job.logisticsInfo
+                it[paymentMode] = job.paymentMode
+                it[amountTendered] = job.amountTendered
+                it[changeDue] = job.changeDue
             }
         }
     }
@@ -57,7 +63,13 @@ object ToneRepository {
                         dateAdded = it[SetupsTable.dateAdded],
                         totalFee = it[SetupsTable.totalFee],
                         servicesDone = it[SetupsTable.servicesDone],
-                        status = it[SetupsTable.status]
+                        status = it[SetupsTable.status],
+                        // NEW PHASE B DATA
+                        inboundMethod = it[SetupsTable.inboundMethod],
+                        logisticsInfo = it[SetupsTable.logisticsInfo],
+                        paymentMode = it[SetupsTable.paymentMode],
+                        amountTendered = it[SetupsTable.amountTendered],
+                        changeDue = it[SetupsTable.changeDue]
                     )
                 }
         }
