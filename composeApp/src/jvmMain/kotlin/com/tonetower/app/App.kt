@@ -1,6 +1,6 @@
 package com.tonetower.app
 
-// --- REFRESHED IMPORTS (Fixed Unresolved References) ---
+// --- REFRESHED IMPORTS ---
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -12,19 +12,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-
-// Icons (Using Extended Icons)
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 
-// Standard Preview
-import androidx.compose.ui.tooling.preview.Preview
+// Icons
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
 
 @Composable
-@Preview
 fun App() {
     MaterialTheme {
+        // AppScreen is pulled from Models.kt
         var currentScreen by remember { mutableStateOf(AppScreen.DASHBOARD) }
 
         Surface(
@@ -47,19 +44,19 @@ fun App() {
                     NavigationRailItem(
                         selected = currentScreen == AppScreen.DASHBOARD,
                         onClick = { currentScreen = AppScreen.DASHBOARD },
-                        icon = { Icon(imageVector = Icons.Default.Home, contentDescription = "Dashboard") },
+                        icon = { Icon(Icons.Default.Home, "Dashboard") },
                         label = { Text("Dashboard") }
                     )
                     NavigationRailItem(
                         selected = currentScreen == AppScreen.SETUPS,
                         onClick = { currentScreen = AppScreen.SETUPS },
-                        icon = { Icon(imageVector = Icons.Default.Build, contentDescription = "Setups") },
+                        icon = { Icon(Icons.Default.Build, "Setups") },
                         label = { Text("Setups") }
                     )
                     NavigationRailItem(
                         selected = currentScreen == AppScreen.STUDIO,
                         onClick = { currentScreen = AppScreen.STUDIO },
-                        icon = { Icon(imageVector = Icons.Default.DateRange, contentDescription = "Studio") },
+                        icon = { Icon(Icons.Default.DateRange, "Studio") },
                         label = { Text("Studio") }
                     )
 
@@ -68,7 +65,7 @@ fun App() {
                     NavigationRailItem(
                         selected = currentScreen == AppScreen.ADMIN,
                         onClick = { currentScreen = AppScreen.ADMIN },
-                        icon = { Icon(imageVector = Icons.Default.Settings, contentDescription = "Admin") },
+                        icon = { Icon(Icons.Default.Settings, "Admin") },
                         label = { Text("Admin") }
                     )
                 }
@@ -98,65 +95,6 @@ fun App() {
 }
 
 @Composable
-fun AdminScreen() {
-    // State for TextFields
-    var setupBasePrice by remember { mutableStateOf("") }
-    var studioHourlyRate by remember { mutableStateOf("") }
-    var isSaving by remember { mutableStateOf(false) }
-
-    // Load data from Database when screen opens
-    LaunchedEffect(Unit) {
-        setupBasePrice = ToneRepository.getSetting("setup_base_price", 1500.0).toString()
-        studioHourlyRate = ToneRepository.getSetting("studio_hourly_rate", 500.0).toString()
-    }
-
-    Column(modifier = Modifier.widthIn(max = 400.dp)) {
-        Text("Service Rates", style = MaterialTheme.typography.titleMedium)
-        Spacer(Modifier.height(16.dp))
-
-        OutlinedTextField(
-            value = setupBasePrice,
-            onValueChange = { setupBasePrice = it },
-            label = { Text("Base Setup Fee (₱)") },
-            modifier = Modifier.fillMaxWidth(),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            singleLine = true
-        )
-
-        Spacer(Modifier.height(16.dp))
-
-        OutlinedTextField(
-            value = studioHourlyRate,
-            onValueChange = { studioHourlyRate = it },
-            label = { Text("Studio Hourly Rate (₱)") },
-            modifier = Modifier.fillMaxWidth(),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            singleLine = true
-        )
-
-        Spacer(Modifier.height(24.dp))
-
-        Button(
-            onClick = {
-                isSaving = true
-                ToneRepository.saveSetting("setup_base_price", setupBasePrice.toDoubleOrNull() ?: 1500.0)
-                ToneRepository.saveSetting("studio_hourly_rate", studioHourlyRate.toDoubleOrNull() ?: 500.0)
-                isSaving = false
-            },
-            enabled = !isSaving,
-            modifier = Modifier.align(Alignment.End)
-        ) {
-            Text(if (isSaving) "Saving..." else "Update Rates")
-        }
-    }
-}
-
-@Composable
-fun DashboardContent() {
-    Text("Welcome to ToneTower. Overview and recent activity will appear here.")
-}
-
-@Composable
 fun SetupsContent() {
     // 1. Form State
     var clientName by remember { mutableStateOf("") }
@@ -175,21 +113,29 @@ fun SetupsContent() {
     // 4. Pricing Logic
     var baseFee by remember { mutableStateOf(1300.0) }
 
+    // 5. Phase B Logistics State
+    var inboundMethod by remember { mutableStateOf("Walk-in") }
+    var logisticsInfo by remember { mutableStateOf("") }
+    val logisticsOptions = listOf("Walk-in", "Courier (Grab/Lalamove)", "Shipping (LBC/JRS)")
+    var expandedLogistics by remember { mutableStateOf(false) }
+
+    // 6. Phase B Financial State
+    var paymentMode by remember { mutableStateOf("Cash") }
+    val paymentOptions = listOf("Cash", "GCash", "Bank Transfer")
+    var expandedPayment by remember { mutableStateOf(false) }
+    var amountTendered by remember { mutableStateOf("") }
+
     // Helper to refresh data from DB
     fun refreshData() {
         history = ToneRepository.getAllSetupJobs()
     }
 
     LaunchedEffect(Unit) {
-        // 1. Get the price from Admin Settings
         baseFee = ToneRepository.getSetting("setup_base_price", 1300.0)
-
-        // 2. Fetch the jobs and update the state
-        // This assignment now triggers a UI RECOMPOSTION (Redraw)
-        history = ToneRepository.getAllSetupJobs()
+        refreshData()
     }
 
-    // Dynamic Total Calculation
+    // Dynamic Calculations
     val totalDisplay = remember(baseFee, needsRestring, needsDeepClean, needsFretLevel) {
         var total = baseFee
         if (needsRestring) total += 200.0
@@ -198,11 +144,11 @@ fun SetupsContent() {
         total
     }
 
+    val amtDouble = amountTendered.toDoubleOrNull() ?: 0.0
+    val changeDue = if (amtDouble > 0) amtDouble - totalDisplay else 0.0
+
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp)
-            .verticalScroll(rememberScrollState()),
+        modifier = Modifier.fillMaxSize().padding(16.dp).verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Text("New Setup Intake", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
@@ -210,28 +156,78 @@ fun SetupsContent() {
 
         // --- Client & Instrument Info ---
         OutlinedTextField(value = clientName, onValueChange = { clientName = it }, label = { Text("Client Name") }, modifier = Modifier.fillMaxWidth())
-        OutlinedTextField(value = clientPhone, onValueChange = { clientPhone = it }, label = { Text("Phone Number") }, modifier = Modifier.fillMaxWidth())
+        OutlinedTextField(value = clientPhone, onValueChange = { clientPhone = it }, label = { Text("Phone Number") }, modifier = Modifier.fillMaxWidth(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone))
         OutlinedTextField(value = instrumentModel, onValueChange = { instrumentModel = it }, label = { Text("Instrument Model") }, modifier = Modifier.fillMaxWidth())
         OutlinedTextField(value = serialNumber, onValueChange = { serialNumber = it }, label = { Text("Serial Number") }, modifier = Modifier.fillMaxWidth())
 
-        Text("Additional Services", style = MaterialTheme.typography.titleMedium)
+        // --- Logistics Row ---
+        Text("Logistics", style = MaterialTheme.typography.titleMedium)
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Box(modifier = Modifier.weight(1f)) {
+                OutlinedButton(onClick = { expandedLogistics = true }, modifier = Modifier.fillMaxWidth().height(56.dp)) {
+                    Text(inboundMethod)
+                }
+                DropdownMenu(expanded = expandedLogistics, onDismissRequest = { expandedLogistics = false }) {
+                    logisticsOptions.forEach { option ->
+                        DropdownMenuItem(text = { Text(option) }, onClick = {
+                            inboundMethod = option
+                            expandedLogistics = false
+                        })
+                    }
+                }
+            }
+            OutlinedTextField(
+                value = logisticsInfo,
+                onValueChange = { logisticsInfo = it },
+                label = { Text("Rider / Tracking Details") },
+                modifier = Modifier.weight(1.5f),
+                singleLine = true
+            )
+        }
 
         // --- Service Checkboxes ---
+        Text("Additional Services", style = MaterialTheme.typography.titleMedium)
         ServiceRow("String Change (+₱200)", needsRestring) { needsRestring = it }
         ServiceRow("Deep Cleaning (+₱300)", needsDeepClean) { needsDeepClean = it }
         ServiceRow("Fret Leveling (+₱1500)", needsFretLevel) { needsFretLevel = it }
+
+        // --- Payment Section ---
+        Text("Payment Details", style = MaterialTheme.typography.titleMedium)
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Box(modifier = Modifier.weight(1f)) {
+                OutlinedButton(onClick = { expandedPayment = true }, modifier = Modifier.fillMaxWidth().height(56.dp)) {
+                    Text(paymentMode)
+                }
+                DropdownMenu(expanded = expandedPayment, onDismissRequest = { expandedPayment = false }) {
+                    paymentOptions.forEach { option ->
+                        DropdownMenuItem(text = { Text(option) }, onClick = {
+                            paymentMode = option
+                            expandedPayment = false
+                        })
+                    }
+                }
+            }
+            OutlinedTextField(
+                value = amountTendered,
+                onValueChange = { amountTendered = it },
+                label = { Text("Amount Tendered (₱)") },
+                modifier = Modifier.weight(1f),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                singleLine = true
+            )
+        }
+
+        if (changeDue > 0) {
+            Text("Change Due: ₱${String.format("%.2f", changeDue)}", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+        }
 
         // --- Total Price Card ---
         Card(
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
             modifier = Modifier.fillMaxWidth()
         ) {
-            Row(
-                modifier = Modifier.padding(24.dp).fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text("Total Estimated Fee:", style = MaterialTheme.typography.titleLarge)
+            Row(modifier = Modifier.padding(24.dp).fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Text("Total Fee:", style = MaterialTheme.typography.titleLarge)
                 Text("₱$totalDisplay", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.ExtraBold)
             }
         }
@@ -245,11 +241,8 @@ fun SetupsContent() {
                     if (needsFretLevel) "Fret Level" else null
                 ).joinToString(", ")
 
-                // Inside your Save Button onClick
-                val generatedId = ToneRepository.generateReferenceId() // Get the SRV-20260415-001 string
-
                 val job = SetupJob(
-                    referenceId = generatedId, // Pass the new ID here!
+                    referenceId = ToneRepository.generateReferenceId(),
                     clientName = clientName,
                     clientPhone = clientPhone,
                     instrumentModel = instrumentModel,
@@ -257,16 +250,20 @@ fun SetupsContent() {
                     dateAdded = System.currentTimeMillis(),
                     totalFee = totalDisplay,
                     servicesDone = services,
-                    status = "Pending"
+                    status = "Pending",
+                    inboundMethod = inboundMethod,
+                    logisticsInfo = logisticsInfo,
+                    paymentMode = paymentMode,
+                    amountTendered = amtDouble,
+                    changeDue = changeDue
                 )
 
                 ToneRepository.saveSetupJob(job)
 
                 // Reset Form
                 clientName = ""; clientPhone = ""; instrumentModel = ""; serialNumber = ""
+                logisticsInfo = ""; amountTendered = ""
                 needsRestring = false; needsDeepClean = false; needsFretLevel = false
-
-                // Update History List instantly
                 refreshData()
             },
             enabled = clientName.isNotBlank() && instrumentModel.isNotBlank(),
@@ -279,73 +276,49 @@ fun SetupsContent() {
         Text("Recent History", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
         HorizontalDivider()
 
-        // --- History List ---
         if (history.isEmpty()) {
-            Text("No recent setups found.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.outline)
+            Text("No recent setups found.", color = MaterialTheme.colorScheme.outline)
         } else {
             history.forEach { job ->
-                HistoryCard(job)
+                HistoryCard(job, onStatusUpdate = { refreshData() })
             }
         }
     }
 }
 
 @Composable
-fun HistoryCard(job: SetupJob) {
+fun HistoryCard(job: SetupJob, onStatusUpdate: () -> Unit) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // Professional ID at the top left
-                Text(
-                    text = job.referenceId,
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.Bold
-                )
-
-                // Status Badge (Red for Pending, Green for Completed)
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text(job.referenceId, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
                 Surface(
                     shape = RoundedCornerShape(4.dp),
-                    color = if (job.status == "Pending")
-                        MaterialTheme.colorScheme.errorContainer
-                    else
-                        MaterialTheme.colorScheme.primaryContainer
+                    color = if (job.status == "Pending") MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.primaryContainer
                 ) {
-                    Text(
-                        text = job.status.uppercase(),
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = if (job.status == "Pending")
-                            MaterialTheme.colorScheme.onErrorContainer
-                        else
-                            MaterialTheme.colorScheme.onPrimaryContainer
-                    )
+                    Text(job.status.uppercase(), modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp), style = MaterialTheme.typography.labelSmall)
                 }
             }
-
             Spacer(Modifier.height(8.dp))
-
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Text(job.clientName, fontWeight = FontWeight.ExtraBold, style = MaterialTheme.typography.titleMedium)
-                Text("₱${job.totalFee}", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.secondary)
+                Text("₱${job.totalFee}", fontWeight = FontWeight.Bold)
             }
+            Text("${job.instrumentModel} • ${job.inboundMethod} (${job.paymentMode})", style = MaterialTheme.typography.bodySmall)
 
-            Text("${job.instrumentModel} • SN: ${job.serialNumber}", style = MaterialTheme.typography.bodySmall)
-
-            if (job.servicesDone.isNotBlank()) {
-                Text(
-                    text = "Services: ${job.servicesDone}",
-                    style = MaterialTheme.typography.bodySmall,
-                    modifier = Modifier.padding(top = 4.dp),
-                    color = MaterialTheme.colorScheme.outline
-                )
+            if (job.status == "Pending") {
+                Button(
+                    onClick = {
+                        ToneRepository.updateJobStatus(job.id, "Completed")
+                        onStatusUpdate()
+                    },
+                    modifier = Modifier.align(Alignment.End).padding(top = 8.dp)
+                ) {
+                    Text("Mark as Complete")
+                }
             }
         }
     }
@@ -353,16 +326,46 @@ fun HistoryCard(job: SetupJob) {
 
 @Composable
 fun ServiceRow(label: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
         Checkbox(checked = checked, onCheckedChange = onCheckedChange)
         Text(label, modifier = Modifier.padding(start = 8.dp))
     }
 }
 
 @Composable
-fun StudioContent() {
-    Text("Studio Booking Management. Track scheduled sessions.")
+fun AdminScreen() {
+    var setupBasePrice by remember { mutableStateOf("") }
+    var studioHourlyRate by remember { mutableStateOf("") }
+    var isSaving by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        setupBasePrice = ToneRepository.getSetting("setup_base_price", 1500.0).toString()
+        studioHourlyRate = ToneRepository.getSetting("studio_hourly_rate", 500.0).toString()
+    }
+
+    Column(modifier = Modifier.widthIn(max = 400.dp)) {
+        Text("Service Rates", style = MaterialTheme.typography.titleMedium)
+        Spacer(Modifier.height(16.dp))
+        OutlinedTextField(value = setupBasePrice, onValueChange = { setupBasePrice = it }, label = { Text("Base Setup Fee (₱)") }, modifier = Modifier.fillMaxWidth(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
+        Spacer(Modifier.height(16.dp))
+        OutlinedTextField(value = studioHourlyRate, onValueChange = { studioHourlyRate = it }, label = { Text("Studio Hourly Rate (₱)") }, modifier = Modifier.fillMaxWidth(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
+        Spacer(Modifier.height(24.dp))
+        Button(
+            onClick = {
+                isSaving = true
+                ToneRepository.saveSetting("setup_base_price", setupBasePrice.toDoubleOrNull() ?: 1500.0)
+                ToneRepository.saveSetting("studio_hourly_rate", studioHourlyRate.toDoubleOrNull() ?: 500.0)
+                isSaving = false
+            },
+            enabled = !isSaving,
+            modifier = Modifier.align(Alignment.End)
+        ) {
+            Text(if (isSaving) "Saving..." else "Update Rates")
+        }
+    }
 }
+
+@Composable
+fun DashboardContent() { Text("Welcome to ToneTower. Overview and recent activity will appear here.") }
+@Composable
+fun StudioContent() { Text("Studio Booking Management. Track scheduled sessions.") }
