@@ -288,6 +288,37 @@ fun SetupsContent() {
 
 @Composable
 fun HistoryCard(job: SetupJob, onStatusUpdate: () -> Unit) {
+    // Helper to generate the text block for sharing/copying
+    fun generateProfessionalReceipt(job: SetupJob): String {
+        val vatAmount = job.totalFee * 0.1071 // 12% VAT-inclusive calculation
+        val netOfVat = job.totalFee - vatAmount
+
+        return """
+            TONETOWER GUITAR REPAIR & STUDIO
+            Taytay, Rizal | TIN: 000-000-000-000
+            ------------------------------------------
+            SERVICE SUMMARY: ${job.referenceId}
+            
+            CUSTOMER: ${job.clientName}
+            UNIT: ${job.instrumentModel} (S/N: ${job.serialNumber})
+            ------------------------------------------
+            SERVICES RENDERED:
+            ${job.servicesDone}
+            
+            Subtotal (Net of VAT): ₱${String.format("%.2f", netOfVat)}
+            VAT (12%):             ₱${String.format("%.2f", vatAmount)}
+            TOTAL AMOUNT DUE:      ₱${String.format("%.2f", job.totalFee)}
+            ------------------------------------------
+            PAYMENT: ${job.paymentMode}
+            AMOUNT TENDERED: ₱${String.format("%.2f", job.amountTendered)}
+            CHANGE:          ₱${String.format("%.2f", job.changeDue)}
+            
+            LOGISTICS: ${job.inboundMethod}
+            ------------------------------------------
+            Thank you for trusting ToneTower!
+        """.trimIndent()
+    }
+
     Card(
         modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
@@ -309,15 +340,30 @@ fun HistoryCard(job: SetupJob, onStatusUpdate: () -> Unit) {
             }
             Text("${job.instrumentModel} • ${job.inboundMethod} (${job.paymentMode})", style = MaterialTheme.typography.bodySmall)
 
-            if (job.status == "Pending") {
-                Button(
-                    onClick = {
-                        ToneRepository.updateJobStatus(job.id, "Completed")
-                        onStatusUpdate()
-                    },
-                    modifier = Modifier.align(Alignment.End).padding(top = 8.dp)
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // EXPORT BUTTON: Prints receipt to console (you can add Clipboard logic here)
+                OutlinedButton(
+                    onClick = { println(generateProfessionalReceipt(job)) },
+                    modifier = Modifier.padding(end = 8.dp)
                 ) {
-                    Text("Mark as Complete")
+                    Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text("Export Receipt")
+                }
+
+                if (job.status == "Pending") {
+                    Button(
+                        onClick = {
+                            ToneRepository.updateJobStatus(job.id, "Completed")
+                            onStatusUpdate()
+                        }
+                    ) {
+                        Text("Mark as Complete")
+                    }
                 }
             }
         }
@@ -369,3 +415,36 @@ fun AdminScreen() {
 fun DashboardContent() { Text("Welcome to ToneTower. Overview and recent activity will appear here.") }
 @Composable
 fun StudioContent() { Text("Studio Booking Management. Track scheduled sessions.") }
+
+fun generateProfessionalReceipt(job: SetupJob): String {
+    val vatAmount = job.totalFee * 0.1071 // Calculates VAT if you are VAT-inclusive
+    val netOfVat = job.totalFee - vatAmount
+
+    return """
+        TONETOWER GUITAR REPAIR & STUDIO
+        Taytay, Rizal | TIN: [Your-TIN-Here]
+        ------------------------------------------
+        SERVICE SUMMARY: ${job.referenceId}
+        Date: ${java.time.format.DateTimeFormatter.ISO_LOCAL_DATE.format(java.time.LocalDate.now())}
+        
+        CUSTOMER: ${job.clientName}
+        UNIT: ${job.instrumentModel} (S/N: ${job.serialNumber})
+        ------------------------------------------
+        SERVICES RENDERED:
+        ${job.servicesDone}
+        
+        Subtotal (Net of VAT): ₱${String.format("%.2f", netOfVat)}
+        VAT (12%):             ₱${String.format("%.2f", vatAmount)}
+        TOTAL AMOUNT DUE:      ₱${String.format("%.2f", job.totalFee)}
+        ------------------------------------------
+        PAYMENT: ${job.paymentMode}
+        AMOUNT TENDERED: ₱${String.format("%.2f", job.amountTendered)}
+        CHANGE:          ₱${String.format("%.2f", job.changeDue)}
+        
+        LOGISTICS: ${job.inboundMethod}
+        DETAILS: ${job.logisticsInfo}
+        ------------------------------------------
+        Thank you for trusting ToneTower!
+        This serves as a Service Summary only.
+    """.trimIndent()
+}
